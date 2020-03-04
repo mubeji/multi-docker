@@ -1,0 +1,45 @@
+# This file is for continuous deployment with travis
+language: generic 
+
+# For supper user permissions
+sudo: required
+
+services: 
+    # Install docker in to container
+    - docker
+
+# For a series of commands to run before test runs
+before_install:
+    # -t tags the react-test repo with my username
+    # NOTE we can tag using any name e.g. MY_IMAGE
+    - docker build -t mubeji/react-test -f ./client/Dockerfile.dev ./client
+    # ./client is where to look for files (context)
+    # Build docker IMAGE using Dockerfile.dev, to allow for testing
+
+
+# The scripts section contains all commands to be executed
+# to run on our test suit
+script:
+    - docker run -e CI=true mubeji/react-test yarn run test
+
+# After everything runs successfully
+
+
+# tell Elastic beanstalk to update
+after_success:
+    # Build production version of the project
+    - docker build -t mubeji/multi-client ./client
+    - docker build -t mubeji/multi-server ./server
+    - docker build -t mubeji/multi-nginx ./nginx
+    - docker build -t mubeji/multi-worker ./worker
+    # Push everything to docker hub,
+    # After setting up username and password environment
+    # variables on Travis ci 
+    # make sure we are logged on to docker cli
+    - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_ID" --password-stdin
+    - docker push mubeji/multi-client
+    - docker push mubeji/multi-server
+    - docker push mubeji/multi-nginx 
+    - docker push mubeji/multi-worker 
+
+

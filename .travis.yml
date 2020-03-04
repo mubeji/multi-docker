@@ -12,7 +12,7 @@ services:
 before_install:
     # -t tags the react-test repo with my username
     # NOTE we can tag using any name e.g. MY_IMAGE
-    - docker build -t mubeji/react-test -f ./client/Dockerfile.dev ./client
+    - docker build -t mubeji/multi-docker -f ./client/Dockerfile.dev ./client
     # ./client is where to look for files (context)
     # Build docker IMAGE using Dockerfile.dev, to allow for testing
 
@@ -20,7 +20,7 @@ before_install:
 # The scripts section contains all commands to be executed
 # to run on our test suit
 script:
-    - docker run -e CI=true mubeji/react-test yarn run test
+    - docker run -e CI=true mubeji/multi-docker yarn run test
 
 # After everything runs successfully
 

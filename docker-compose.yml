@@ -1,0 +1,96 @@
+
+version: '3'
+
+services: 
+    # Just a name, can be whatever you want
+    postgres:
+        # Use image tagged as latest
+        # This will download postgres into our project
+        image: 'postgres:latest'
+        # 
+        environment:
+            - POSTGRES_PASSWORD=postgres_password
+    redis:
+        image: 'redis:latest'
+
+
+
+    # Custom images
+
+    # The name api/server name will be part of the url to access the server
+    api:
+        depends_on:
+            - postgres
+            - redis
+        build: 
+            # Specify where to find the Dockerfile.dev to use
+            # as well as the rest of the code to build the image
+            context: ./server
+            # Dockerfile to be used
+            dockerfile: Dockerfile.dev
+        # Environment variable
+        environment: 
+            # For redis
+            # key and value, redis is the service above
+            - REDIS_HOST=redis
+            # Port, 6379 is the defualt redis port
+            - REDIS_PORT=6379 
+            # For Postgres
+            - PGUSER=postgres
+            # The service above
+            - PGHOST=postgres
+            - PGDATABASE=postgres
+            - PGPASSWORD=postgres_password
+            - PGPORT=5432
+        
+        # Volumes let you update a container without having to 
+        # rebuild, by mapping container WORKDIR to pwd    
+        volumes:
+            # Don't try to map
+            - /app/node_modules
+            # Copy everything in the ./server to /app in the container
+            - ./server:/app
+
+    # The name client will be part of the url to access the client
+    client:
+        depends_on: 
+            - api
+        build: 
+            context: ./client
+            dockerfile: Dockerfile.dev   
+        volumes: 
+            - /app/node_modules
+            - ./client:/app
+
+    worker:
+        depends_on: 
+            - redis
+        build: 
+            context: ./worker
+            dockerfile: Dockerfile.dev
+        volumes: 
+            - /app/node_modules
+            - ./worker:/app
+        environment: 
+            - REDIS_HOST=redis
+            - REDIS_PORT=6397
+
+    # The purpose of nginx here is to route endpoints that 
+    # are prefixed with /api to the server (node.js) else if they are
+    # not, route them to the client (react)
+    nginx:
+        depends_on:    
+            - api
+            - client
+        # To make sure this image is aways running
+        restart: always
+        # Because we have a custom version of nginx
+        build: 
+            dockerfile: Dockerfile.dev
+            context: ./nginx
+        ports: 
+            # Map port 3030 on localhost to port 80 of the container
+            - '3030:80'
+
+
+        ###########   NOTE!!  this port 1000 is the react app port
